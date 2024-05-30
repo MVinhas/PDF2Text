@@ -1,43 +1,85 @@
 <?php
+session_start();
 require 'vendor/autoload.php';
 
-use Smalot\PdfParser\Parser;
-
-function pdfToText(string $filePath): string {
+function pdfToText(string $filePath, int $maxChars): string {
     $escapedPath = escapeshellarg($filePath);
-    $output = shell_exec("PDF2Text $escapedPath -");
-    $output = strip_tags($output);
-    $output = preg_replace('/\s+/', ' ', $output);
-    return $output;
+
+    $output = shell_exec("pdftotext $escapedPath -");
+    $text = strip_tags($output);
+
+    if ($maxChars === 0) return $text;
+    
+    if (strlen($text) <= $maxChars) {
+        return $text;
+    }
+
+    $subText = substr($text, 0, $maxChars);
+
+    $lastSentenceEndPos = max(
+        strrpos($subText, '.'), 
+        strrpos($subText, '?'), 
+        strrpos($subText, '!')
+    );
+
+    if ($lastSentenceEndPos === false) {
+        return $subText;
+    }
+
+    return substr($text, 0, $lastSentenceEndPos + 1);
 }
 
-function truncateText(string $text, int $length = 1000, string $suffix = ''.PHP_EOL): string {
-    if (strlen($text) <= $length) {
-        return $text . ' ' . $suffix;
+function handleFileUpload(array $file, int $maxChars, int $paragraphSize): void {
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        handleError();
     }
-    $truncated = substr($text, 0, $length);
-    $lastSpace = strrpos($truncated, '.');
-    if ($lastSpace !== false) {
-        $truncated = substr($truncated, 0, $lastSpace);
-    }
-    return $truncated . '. ' . $suffix;
+
+    $filePath = $file['tmp_name'];
+    $text = pdfToText($filePath, $maxChars);
+
+    $text = createParagraphs($text, $paragraphSize);
+
+    include 'result.php';
+    unlink($filePath);
 }
 
-if (php_sapi_name() === 'cli') {
-    if ($argc !== 2) {
-        echo "Usage: php PDF2Text.php <path_to_pdf>\n";
-        exit(1);
+function handleError(): void {
+    include 'error.php';
+    exit(1);
+}
+
+function createParagraphs(string $text, int $paragraphSize): string {
+    $text = preg_replace('/\s+/', ' ', trim($text)); 
+    $sentences = preg_split('/(?<=[.!?])\s+/', $text, -1, PREG_SPLIT_NO_EMPTY);
+    $paragraphs = [];
+    $currentParagraph = '';
+
+    foreach ($sentences as $sentence) {
+        if (strlen($currentParagraph . ' ' . $sentence) <= $paragraphSize) {
+            $currentParagraph .= ($currentParagraph === '' ? '' : ' ') . $sentence;
+        } else {
+            $paragraphs[] = trim($currentParagraph);
+            $currentParagraph = $sentence;
+        }
     }
 
-    $filePath = $argv[1];
-    if (!file_exists($filePath)) {
-        echo "File not found: $filePath\n";
-        exit(1);
+    if (!empty($currentParagraph)) {
+        $paragraphs[] = trim($currentParagraph);
     }
 
-    $text = pdfToText($filePath);
-    $truncatedText = truncateText($text);
-    echo $truncatedText;
+    return implode("\n\n", $paragraphs);
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        handleError();
+    }
+    $file = $_FILES['file'];
+    $maxChars = isset($_POST['max_chars']) ? (int)$_POST['max_chars'] : 0;
+    $_SESSION['max_chars'] = $maxChars;
+    $paragraphSize = isset($_POST['paragraph_size']) ? (int)$_POST['paragraph_size'] : 500;
+    $_SESSION['paragraph_size'] = $paragraphSize;
+    handleFileUpload(file: $file, maxChars: $maxChars, paragraphSize: $paragraphSize);
 } else {
-    echo "This script must be run from the command line.\n";
+    handleError();
 }

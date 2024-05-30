@@ -1,6 +1,4 @@
-Got it! Here's the revised README.md for the PDF2Text project:
 
-```
 # PDF2Text
 
 PDF2Text is a lightweight tool designed to extract text from PDF files. It provides a simple and efficient way to convert PDF documents into plain text format, making it easy to manipulate, analyze, and process the extracted text.
@@ -10,8 +8,7 @@ PDF2Text is a lightweight tool designed to extract text from PDF files. It provi
 - Extract text content from PDF files.
 - Preserve formatting and layout.
 - Support for both single-page and multi-page PDFs.
-- Command-line interface for easy integration into scripts and workflows.
-- Cross-platform compatibility (works on Windows, macOS, and Linux).
+- Web-browser interface
 
 ## Installation
 
@@ -22,19 +19,41 @@ PDF2Text is a lightweight tool designed to extract text from PDF files. It provi
 
 ### Installation Steps
 
-1. Clone the repository:
+### 1. Install `pdftotext`
+
+#### On Ubuntu/Debian
+
+```sh
+sudo apt-get update
+sudo apt-get install poppler-utils
+```
+On macOS
+If you have Homebrew installed:
+
+```
+brew install poppler
+```
+On Windows
+Download the Poppler for Windows package from http://blog.alivate.com.au/poppler-windows/.
+Extract the package to a directory, e.g., C:\Poppler.
+Add the bin directory (e.g., C:\Poppler\bin) to your system's PATH environment variable.
+
+2. Clone the repository:
 
    ```bash
-   git clone https://github.com/your_username/PDF2Text.git
+   git clone https://github.com/MVinhas/PDF2Text.git
    ```
+   
+   
+3. If necessary, update the max_upload_filesize and max_post_size settings in your php.ini file to accommodate large PDF files.
 
-2. Navigate to the project directory:
+4. Navigate to the project directory:
 
    ```bash
    cd PDF2Text
    ```
 
-3. Install dependencies using Composer:
+5. Install dependencies using Composer:
 
    ```bash
    composer install
@@ -42,13 +61,18 @@ PDF2Text is a lightweight tool designed to extract text from PDF files. It provi
 
 ## Usage
 
-To extract text from a PDF file, run the following command in your terminal:
+1. Access the application through a web browser.
 
-```bash
-php index.php /path/to/your/file.pdf
-```
+2. Choose a PDF file to upload.
 
-Replace `/path/to/your/file.pdf` with the actual path to your PDF file. The extracted text will be displayed in the terminal.
+3. Optionally, specify the maximum number of characters to extract from the PDF file. Enter 0 to extract all text.
+
+4. Click the "Upload PDF" button to initiate the conversion process.
+
+5. Once the conversion is complete, the extracted text will be displayed on the screen.
+
+6. If necessary, adjust the maximum number of characters and upload another PDF file.
+
 
 ## Contributing
 
@@ -56,7 +80,4 @@ Contributions are welcome! If you have any ideas, suggestions, or bug fixes, fee
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-```
-
-Feel free to modify this template as needed for your project!
+This project is licensed under the GNU General Public License v3.0. See the LICENSE file for details.
