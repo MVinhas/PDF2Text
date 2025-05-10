@@ -1,5 +1,8 @@
 <?php
-session_start();
+require_once 'config.php';
+secureSession();
+setSecurityHeaders();
+
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
@@ -15,6 +18,28 @@ if (empty($_SESSION['csrf_token'])) {
     <meta name="author" content="Micael Vinhas">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="index.js" defer></script>
+    <script>
+    function displayFileName() {
+        const fileInput = document.getElementById('file');
+        const selectedFile = document.getElementById('selectedFile');
+        const maxSize = 256 * 1024 * 1024; // 256MB in bytes
+        
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            const fileSize = file.size;
+            const fileSizeMB = (fileSize / (1024 * 1024)).toFixed(2);
+            
+            if (fileSize > maxSize) {
+                selectedFile.innerHTML = `<span class="text-red-600">File is too large (${fileSizeMB}MB). Maximum size is 256MB.</span>`;
+                fileInput.value = ''; // Clear the file input
+            } else {
+                selectedFile.innerHTML = `Selected file: ${file.name} (${fileSizeMB}MB)`;
+            }
+        } else {
+            selectedFile.innerHTML = '';
+        }
+    }
+    </script>
 </head>
 <body class="bg-gray-100 flex flex-col min-h-screen">
     <div class="flex-grow flex items-center justify-center">
@@ -41,6 +66,12 @@ if (empty($_SESSION['csrf_token'])) {
                 </div>
                 
                 <div>
+                    <label for="line_length" class="block text-sm font-medium text-gray-700">Line Length</label>
+                    <input type="number" id="line_length" name="line_length" value="<?= $_SESSION['line_length'] ?? 80 ?>" min="40" max="120" step="10" placeholder="Enter line length" required class="mt-2 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm leading-5 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    <p class="mt-2 text-sm text-gray-500">Specify the maximum number of characters per line (between 40 and 120).</p>
+                </div>
+                
+                <div>
                     <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md shadow-sm text-sm font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Upload PDF</button>
                 </div>
             </form>
@@ -49,7 +80,7 @@ if (empty($_SESSION['csrf_token'])) {
     </div>
 
     <footer class="bg-gray-200 text-center py-4 mt-auto">
-        <p class="text-sm text-gray-600">&copy; <?= date("Y"); ?> Micael Vinhas</p>
+        <p class="text-sm text-gray-600">&copy; 2024 - <?= date("Y"); ?> Micael Vinhas</p>
         <p class="text-sm text-gray-600">Source Code: <a href="https://github.com/MVinhas/PDF2Text" class="text-indigo-600 hover:text-indigo-900">GitHub</a></p>
     </footer>
 </body>

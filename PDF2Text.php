@@ -1,91 +1,106 @@
 <?php
 
-session_start();
-require 'vendor/autoload.php';
+require_once __DIR__ . '/vendor/autoload.php';
 
-function pdfToText(string $filePath, int $maxChars): string
-{
-    $escapedPath = escapeshellarg($filePath);
-    $output = shell_exec("pdftotext $escapedPath -");
-    $text = strip_tags($output);
+use PDF2Text\Core\Config;
+use PDF2Text\Core\PDFService;
+use PDF2Text\Security\SecurityService;
+use PDF2Text\Utils\Logger;
 
-    if ($maxChars === 0) {
-        return $text;
-    }
+// Initialize services
+$config = Config::getInstance();
+$security = new SecurityService();
+$pdfService = new PDFService();
 
-    if (strlen($text) <= $maxChars) {
-        return $text;
-    }
+// Set up security
+$security->secureSession();
+$security->setSecurityHeaders();
 
-    $subText = substr($text, 0, $maxChars);
-    $lastSentenceEndPos = max(
-        strrpos($subText, '.'),
-        strrpos($subText, '?'),
-        strrpos($subText, '!')
-    );
-
-    if ($lastSentenceEndPos === false) {
-        return $subText;
-    }
-
-    return substr($text, 0, $lastSentenceEndPos + 1);
-}
-
-function handleFileUpload(array $file, int $maxChars, int $paragraphSize): void
-{
-    if ($file['error'] !== UPLOAD_ERR_OK) {
-        handleError();
-    }
-
-    $filePath = $file['tmp_name'];
-    $text = pdfToText($filePath, $maxChars);
-    $text = createParagraphs($text, $paragraphSize);
-
-    include 'result.php';
-    unlink($filePath);
-}
-
-function handleError(): void
-{
-    include 'error.php';
-    exit(1);
-}
-
-function createParagraphs(string $text, int $paragraphSize): string
-{
-    $text = preg_replace('/\s+/', ' ', trim($text));
-    $sentences = preg_split('/(?<=[.!?])\s+/', $text, -1, PREG_SPLIT_NO_EMPTY);
-    $paragraphs = [];
-    $currentParagraph = '';
-
-    foreach ($sentences as $sentence) {
-        if (strlen($currentParagraph . ' ' . $sentence) <= $paragraphSize) {
-            $currentParagraph .= ($currentParagraph === '' ? '' : ' ') . $sentence;
-        } else {
-            $paragraphs[] = trim($currentParagraph);
-            $currentParagraph = $sentence;
+// Validate CSRF token
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Skip CSRF validation in test environment
+    if (!$config->isTestEnvironment()) {
+        if (!isset($_POST['csrf_token']) || !$security->validateCsrfToken('pdf_upload', $_POST['csrf_token'])) {
+            Logger::error('CSRF token validation failed');
+            include 'error.php';
+            exit(1);
         }
     }
 
-    if (!empty($currentParagraph)) {
-        $paragraphs[] = trim($currentParagraph);
+    // Check rate limit
+    if (!$security->checkRateLimit($_SERVER['REMOTE_ADDR'])) {
+        Logger::warning('Rate limit exceeded', ['ip' => $_SERVER['REMOTE_ADDR']]);
+        $_SESSION['last_error'] = 'Too many requests. Please try again later.';
+        include 'error.php';
+        exit(1);
     }
-
-    return implode("\n\n", $paragraphs);
 }
 
+// Handle file upload
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
-    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
-        handleError();
+    try {
+        $file = $_FILES['file'];
+        
+        // Validate file
+        if (!$security->validateFile($file)) {
+            throw new RuntimeException('Invalid file upload');
+        }
+
+        // Validate input parameters
+        $maxChars = filter_var($_POST['max_chars'] ?? 0, FILTER_VALIDATE_INT, [
+            'options' => ['min_range' => 0, 'max_range' => $config->get('upload.max_allowed_chars', 1000000)]
+        ]);
+
+        $paragraphSize = filter_var($_POST['paragraph_size'] ?? 500, FILTER_VALIDATE_INT, [
+            'options' => ['min_range' => 0, 'max_range' => $config->get('upload.max_allowed_chars', 1000000)]
+        ]);
+
+        $lineLength = filter_var($_POST['line_length'] ?? 80, FILTER_VALIDATE_INT, [
+            'options' => ['min_range' => 0, 'max_range' => $config->get('upload.max_allowed_chars', 1000000)]
+        ]);
+
+        if ($maxChars === false || $paragraphSize === false || $lineLength === false) {
+            throw new RuntimeException('Invalid input parameters');
+        }
+
+        // Process the PDF
+        $text = $pdfService->convertToText($file['tmp_name'], $maxChars);
+        
+        // If no text was extracted, show a message but don't treat it as an error
+        if (empty($text)) {
+            $_SESSION['converted_text'] = 'No text content could be extracted from the PDF.';
+        } else {
+            $text = $pdfService->createParagraphs($text, $paragraphSize);
+            $_SESSION['converted_text'] = $security->sanitizeOutput($text);
+        }
+        
+        $_SESSION['max_chars'] = $maxChars;
+        $_SESSION['paragraph_size'] = $paragraphSize;
+        $_SESSION['line_length'] = $lineLength;
+
+        // Clean up
+        if (file_exists($file['tmp_name'])) {
+            unlink($file['tmp_name']);
+        }
+
+        // Redirect to result page
+        if (!$config->isTestEnvironment()) {
+            include 'result.php';
+            exit(0);
+        }
+    } catch (Throwable $e) {
+        Logger::error('PDF processing error', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+            'file' => $file['name'] ?? 'unknown'
+        ]);
+        $_SESSION['last_error'] = sprintf('Error processing PDF: %s', $e->getMessage());
+        include 'error.php';
+        exit(1);
     }
-
-    $file = $_FILES['file'];
-    $maxChars = isset($_POST['max_chars']) ? (int)$_POST['max_chars'] : 0;
-    $_SESSION['max_chars'] = $maxChars;
-    $paragraphSize = isset($_POST['paragraph_size']) ? (int)$_POST['paragraph_size'] : 500;
-    $_SESSION['paragraph_size'] = $paragraphSize;
-
-    handleFileUpload($file, $maxChars, $paragraphSize);
 } else {
-    handleError();
+    if (!$config->isTestEnvironment()) {
+        include 'error.php';
+        exit(1);
+    }
 }
