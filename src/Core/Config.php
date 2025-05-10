@@ -50,10 +50,12 @@ class Config
     {
         // Automatically detect PHPUnit or CLI-based test runners
         return (php_sapi_name() === 'cli' && (
-            defined('PHPUNIT_RUNNING') || 
-            isset($_ENV['APP_ENV']) && $_ENV['APP_ENV'] === 'testing' || 
-            getenv('APP_ENV') === 'testing' || 
-            (isset($_SERVER['argv']) && implode(' ', $_SERVER['argv']) !== '' && preg_match('/phpunit|pest/', implode(' ', $_SERVER['argv'])))
+            defined('PHPUNIT_RUNNING') ||
+            isset($_ENV['APP_ENV']) && $_ENV['APP_ENV'] === 'testing' ||
+            getenv('APP_ENV') === 'testing' ||
+            isset($_SERVER['argv'])
+            && implode(' ', $_SERVER['argv']) !== ''
+            && preg_match('/phpunit|pest/', implode(' ', $_SERVER['argv']))
         ));
     }
 

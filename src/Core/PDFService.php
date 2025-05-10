@@ -33,7 +33,7 @@ class PDFService
 
             // Try using pdftotext first
             $text = $this->convertUsingPdftotext($filePath);
-            
+
             // If pdftotext fails, fall back to PDF Parser
             if (empty(trim($text))) {
                 $text = $this->convertUsingParser($filePath);
@@ -71,22 +71,22 @@ class PDFService
     {
         // First, normalize line endings
         $text = str_replace(["\r\n", "\r"], "\n", $text);
-        
+
         // Replace tabs with spaces
         $text = str_replace("\t", " ", $text);
-        
+
         // Remove non-printable characters
         $text = preg_replace('/[\x00-\x1F\x7F-\xFF]/', '', $text);
-        
+
         // Remove any HTML tags
         $text = strip_tags($text);
-        
+
         // Ensure proper spacing after punctuation
         $text = preg_replace('/([.!?])\s*/', '$1 ', $text);
-        
+
         // Normalize spaces - this is the key change
         $text = preg_replace('/\s+/', ' ', $text);
-        
+
         return trim($text);
     }
 
@@ -95,13 +95,13 @@ class PDFService
         if ($maxChars === 0 || strlen($text) <= $maxChars) {
             return $text;
         }
-    
+
         $pattern = '/.*?[.!?](?:\s+|$)/'; // Match each sentence including punctuation and following space
         preg_match_all($pattern, $text, $matches);
-    
+
         $result = '';
         $length = 0;
-    
+
         foreach ($matches[0] as $sentence) {
             $sentenceLength = strlen($sentence);
             if ($length + $sentenceLength > $maxChars) {
@@ -110,10 +110,10 @@ class PDFService
             $result .= $sentence;
             $length += $sentenceLength;
         }
-    
+
         return rtrim($result);
     }
-    
+
 
 
     private function wrapText(string $text): string
@@ -204,5 +204,4 @@ class PDFService
 
         return implode("\n\n", $paragraphs);
     }
-
-} 
+}

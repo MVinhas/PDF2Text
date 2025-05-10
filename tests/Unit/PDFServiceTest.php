@@ -38,7 +38,7 @@ class PDFServiceTest extends TestCase
     {
         $text = "Hello  World!\tTest\r\n  Multiple   Spaces";
         $expected = "Hello World! Test Multiple Spaces";
-        
+
         $result = $this->invokePrivateMethod($this->pdfService, 'cleanText', [$text]);
         $this->assertEquals($expected, $result);
     }
@@ -46,7 +46,7 @@ class PDFServiceTest extends TestCase
     public function testLimitText(): void
     {
         $text = "This is a test. This is another sentence. This is the last one.";
-        
+
         // Test with no limit
         $result = $this->invokePrivateMethod($this->pdfService, 'limitText', [$text, 0]);
         $this->assertEquals($text, $result);
@@ -62,11 +62,13 @@ class PDFServiceTest extends TestCase
 
     public function testWrapText(): void
     {
-        $text = "This is a long text that needs to be wrapped into multiple lines. It should respect the line length limit and maintain proper formatting.";
+        $text = "This is a long text that needs to be wrapped into multiple lines. "
+        . "It should respect the line length limit and maintain proper formatting.";
+
         $this->pdfService->setLineLength(40);
 
         $result = $this->invokePrivateMethod($this->pdfService, 'wrapText', [$text]);
-        
+
         // Verify that no line exceeds the line length
         $lines = explode("\n", $result);
         foreach ($lines as $line) {
@@ -85,7 +87,7 @@ class PDFServiceTest extends TestCase
     public function testCreateParagraphs(): void
     {
         $text = "First sentence. Second sentence. Third sentence. Fourth sentence.";
-        
+
         // Test with no paragraph size limit
         $result = $this->pdfService->createParagraphs($text, 0);
         $this->assertEquals($text, $result);
@@ -94,7 +96,7 @@ class PDFServiceTest extends TestCase
         $result = $this->pdfService->createParagraphs($text, 30);
         $paragraphs = explode("\n\n", $result);
         $this->assertCount(4, $paragraphs);
-        
+
         // Verify paragraph lengths
         foreach ($paragraphs as $paragraph) {
             $this->assertLessThanOrEqual(30, strlen($paragraph));
@@ -116,4 +118,4 @@ class PDFServiceTest extends TestCase
         $method->setAccessible(true);
         return $method->invokeArgs($object, $parameters);
     }
-} 
+}

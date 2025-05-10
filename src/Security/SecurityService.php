@@ -15,20 +15,28 @@ class SecurityService
 {
     private CsrfTokenManager $csrfManager;
     private RateLimiterFactory $rateLimiter;
-    private array $securityHeaders = [
-        'X-Content-Type-Options' => 'nosniff',
-        'X-Frame-Options' => 'DENY',
-        'X-XSS-Protection' => '1; mode=block',
-        'Referrer-Policy' => 'strict-origin-when-cross-origin',
-        'Content-Security-Policy' => "default-src 'self'; script-src 'self' 'unsafe-inline' cdn.tailwindcss.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:;",
-        'Permissions-Policy' => 'geolocation=(), microphone=(), camera=()',
-        'Strict-Transport-Security' => 'max-age=31536000; includeSubDomains',
-    ];
+    private array $securityHeaders = [];
 
     public function __construct(?TokenStorageInterface $tokenStorage = null)
     {
+        $this->securityHeaders = [
+            'X-Content-Type-Options' => 'nosniff',
+            'X-Frame-Options' => 'DENY',
+            'X-XSS-Protection' => '1; mode=block',
+            'Referrer-Policy' => 'strict-origin-when-cross-origin',
+            'Content-Security-Policy' => implode(' ', [
+                "default-src 'self';",
+                "script-src 'self' 'unsafe-inline' cdn.tailwindcss.com;",
+                "style-src 'self' 'unsafe-inline';",
+                "img-src 'self' data:;",
+                "font-src 'self' data:;"
+            ]),
+            'Permissions-Policy' => 'geolocation=(), microphone=(), camera=()',
+            'Strict-Transport-Security' => 'max-age=31536000; includeSubDomains',
+        ];
+
         $config = Config::getInstance();
-        
+
         $storage = $tokenStorage ?? new NativeSessionTokenStorage();
         $this->csrfManager = new CsrfTokenManager(new UriSafeTokenGenerator(), $storage);
 
@@ -47,12 +55,12 @@ class SecurityService
     public function generateCsrfToken(string $tokenId): string
     {
         $token = $this->csrfManager->getToken($tokenId)->getValue();
-        
+
         // In test environment, store the token directly in session
         if (Config::getInstance()->isTestEnvironment()) {
             $_SESSION['csrf_tokens'][$tokenId] = $token;
         }
-        
+
         return $token;
     }
 
@@ -62,7 +70,7 @@ class SecurityService
         if (Config::getInstance()->isTestEnvironment()) {
             return isset($_SESSION['csrf_tokens'][$tokenId]) && $_SESSION['csrf_tokens'][$tokenId] === $token;
         }
-        
+
         return $this->csrfManager->isTokenValid($this->csrfManager->getToken($tokenId));
     }
 
@@ -121,4 +129,4 @@ class SecurityService
     {
         return htmlspecialchars($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
-} 
+}

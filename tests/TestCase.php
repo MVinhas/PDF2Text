@@ -10,7 +10,7 @@ class TestCase extends BaseTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Initialize session for testing
         $_SESSION = [];
         $_POST = [];
@@ -20,7 +20,7 @@ class TestCase extends BaseTestCase
             'HTTP_USER_AGENT' => 'PHPUnit Test',
             'REMOTE_ADDR' => '127.0.0.1'
         ];
-        
+
         // Set test environment
         Config::getInstance()->setTestEnvironment(true);
     }
@@ -35,15 +35,15 @@ class TestCase extends BaseTestCase
     protected function createTestPdf(string $text): string
     {
         $tempPath = tempnam(sys_get_temp_dir(), 'test_pdf_');
-    
+
         $pdf = new \FPDF();
         $pdf->AddPage();
         $pdf->SetFont('Arial', '', 12);
         $pdf->MultiCell(0, 10, $text);
         $pdf->Output('F', $tempPath);  // Write PDF to file
-    
+
         return $tempPath;
-    }    
+    }
 
     protected function createMockFileUpload(string $content): array
     {
@@ -56,4 +56,4 @@ class TestCase extends BaseTestCase
             'size' => filesize($tempFile)
         ];
     }
-} 
+}

@@ -25,7 +25,7 @@ class Logger
     private static function initializeLogger(): void
     {
         $logger = new MonologLogger('pdf2text');
-        
+
         // Set up the formatter
         $dateFormat = "Y-m-d H:i:s";
         $output = "[%datetime%] %channel%.%level_name%: %message% %context% %extra%\n";
@@ -49,7 +49,7 @@ class Logger
     private static function getLogLevel(): int
     {
         $level = strtoupper(self::$config->get('logging.level', 'error'));
-        return match($level) {
+        return match ($level) {
             'DEBUG' => MonologLogger::DEBUG,
             'INFO' => MonologLogger::INFO,
             'NOTICE' => MonologLogger::NOTICE,
@@ -101,4 +101,4 @@ class Logger
     {
         self::getInstance()->debug($message, $context);
     }
-} 
+}
