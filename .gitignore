@@ -1,1 +1,51 @@
-vendor/
+# Dependencies
+/vendor/
+composer.lock
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE files
+.idea/
+.vscode/
+*.sublime-*
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+error.log
+
+# Cache
+/cache/
+*.cache
+
+# Temporary files
+*.tmp
+*.temp
+/tmp/
+/temp/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Security
+*.pem
+*.key
+*.crt
+*.csr
+*.srl
+*.p12
+*.pfx
+
+# Build files
+/build/
+/dist/
+
+# Test coverage
+/coverage/
+.phpunit.result.cache
